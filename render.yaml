@@ -7,18 +7,4 @@ services:
     dockerfilePath: ./Dockerfile
     envVars:
       - key: DISCORD_TOKEN
-        sync: false  # Set this in Render dashboard
-      - key: TARGET_ROLE_ID
-        value: "1275073147481358454"
-      - key: CHANNEL_ID
-        value: "1275073148370292754"
-      - key: PING_MESSAGE
-        value: "{user.mention} just joined! Hellyo~! ♡"
-      - key: EMBED_DESCRIPTION
-        value: "<:Happy:1275091838759469138> Grab your roles in #1275073148370292754\n\n<:Finger:1277935593367802007> Make sure to follow the #1275073148370292754\n\n<:Wink:1300100664290181202> Enjoy your stay and have fun ♡"
-      - key: EMBED_THUMBNAIL_URL
-        value: "https://i.imgur.com/QfIZXUD.jpeg"
-      - key: EMBED_BANNER_URL
-        value: "https://i.imgur.com/krvxCEX.png"
-      - key: EMBED_COLOR
-        value: "0xFFC7EF"
+        sync: false

@@ -1,4 +1,7 @@
+# Hidden files (secrets)
 .env
+
+# Runtime data files (created by bot, not needed in repo)
 *.json
 __pycache__/
 *.pyc

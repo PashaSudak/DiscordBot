@@ -1,21 +1,23 @@
 import os
 import json
 import time
+import re
 import discord
 from dotenv import load_dotenv
+import config
 
 load_dotenv()
 
 TOKEN = os.getenv("DISCORD_TOKEN")
-TARGET_ROLE_ID = int(os.getenv("TARGET_ROLE_ID", "0"))
-CHANNEL_ID = int(os.getenv("CHANNEL_ID", "0"))
-PING_MESSAGE_TEMPLATE = os.getenv("PING_MESSAGE", "{user.mention} just joined! Hellyo~! ♡")
-EMBED_DESCRIPTION = os.getenv("EMBED_DESCRIPTION", "").strip('"').strip("'")
-EMBED_THUMBNAIL_URL = os.getenv("EMBED_THUMBNAIL_URL", "https://i.imgur.com/QfIZXUD.jpeg")
-EMBED_BANNER_URL = os.getenv("EMBED_BANNER_URL", "https://i.imgur.com/krvxCEX.png")
-EMBED_COLOR = int(os.getenv("EMBED_COLOR", "0x5865F2"), 16)
 
-LEAVE_GRACE_SECONDS = 120  # 2 minutes
+TARGET_ROLE_ID = config.TARGET_ROLE_ID
+CHANNEL_ID = config.CHANNEL_ID
+PING_MESSAGE_TEMPLATE = config.PING_MESSAGE
+EMBED_DESCRIPTION = config.EMBED_DESCRIPTION
+EMBED_THUMBNAIL_URL = config.EMBED_THUMBNAIL_URL
+EMBED_BANNER_URL = config.EMBED_BANNER_URL
+EMBED_COLOR = config.EMBED_COLOR
+LEAVE_GRACE_SECONDS = config.LEAVE_GRACE_SECONDS
 
 intents = discord.Intents.default()
 intents.members = True  # Required to listen for member updates & member removal
@@ -69,14 +71,9 @@ async def on_ready():
 
 def format_description(template: str, after: discord.Member) -> str:
     """Replace #channel_id with channel mentions and \\n with newlines."""
-    import re
-
-    def replace_channel(match):
-        channel_id = match.group(1)
-        return f"<#{channel_id}>"
 
     result = template.replace("\\n", "\n")
-    result = re.sub(r'#(\d+)', replace_channel, result)
+    result = re.sub(r'#(\d+)', lambda m: f"<#{m.group(1)}>", result)
     result = result.format(
         user=after,
         user_mention=after.mention,
@@ -176,6 +173,4 @@ async def on_member_remove(member: discord.Member):
 if __name__ == "__main__":
     if not TOKEN:
         raise ValueError("DISCORD_TOKEN is not set in .env file")
-    if TARGET_ROLE_ID == 0 or CHANNEL_ID == 0:
-        raise ValueError("TARGET_ROLE_ID and CHANNEL_ID must be set in .env file")
     client.run(TOKEN)

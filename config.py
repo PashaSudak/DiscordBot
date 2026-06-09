@@ -5,8 +5,8 @@
 # Role ID that triggers the welcome message
 TARGET_ROLE_ID = 1275073147481358454
 
-# Channel ID where messages are sent
-CHANNEL_ID = 1275073148370292754
+# Channel ID where messages are sent (general chat)
+CHANNEL_ID = 1275073148370292748
 
 # Plain text message that pings the user
 # Available placeholders: {user.mention}, {user.name}, {user.id}
@@ -14,7 +14,7 @@ PING_MESSAGE = "{user.mention} just joined! Hellyo~! ♡"
 
 # Embed description — supports emojis (<:name:id>), channel mentions (#channel_id), and \n for newlines
 # Available placeholders: {user.mention}, {user.name}, {user.id}
-EMBED_DESCRIPTION = "<:Happy:1275091838759469138> Grab your roles in #1275073148370292754\n\n<:Finger:1277935593367802007> Make sure to follow the #1275073148370292754\n\n<:Wink:1300100664290181202> Enjoy your stay and have fun ♡"
+EMBED_DESCRIPTION = "<:Happy:1275091838759469138> Grab your roles in #1275073147875622914\n\n<:Finger:1277935593367802007> Make sure to follow the #1275073147875622913\n\n<:Wink:1300100664290181202> Enjoy your stay and have fun ♡"
 
 # Decorative thumbnail image (top-right corner of embed)
 EMBED_THUMBNAIL_URL = "https://i.imgur.com/QfIZXUD.jpeg"

@@ -6,7 +6,7 @@
 TARGET_ROLE_ID = 1275073147481358454
 
 # Channel ID where messages are sent
-CHANNEL_ID = 1275073148370292754
+CHANNEL_ID = 1275073148370292748
 
 # Plain text message that pings the user
 # Available placeholders: {user.mention}, {user.name}, {user.id}

@@ -14,4 +14,4 @@ RUN mkdir -p /app/data && \
     chmod 777 /app/data
 
 # Render will run this command (defined in render.yaml)
-CMD ["python", "bot.py"]
+CMD ["python", "main.py"]

@@ -8,6 +8,9 @@ TARGET_ROLE_ID = 1275073147481358454
 # Channel ID where messages are sent (general chat)
 CHANNEL_ID = 1275073148370292748
 
+# Channel ID where "say" commands are accepted (admin channel)
+ADMIN_CHANNEL_ID = 1515451112046465105
+
 # Plain text message that pings the user
 # Available placeholders: {user.mention}, {user.name}, {user.id}
 PING_MESSAGE = "{user.mention} just joined! Hellyo~! ♡"

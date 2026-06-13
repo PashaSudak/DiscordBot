@@ -6,10 +6,12 @@ registers event listeners, and delegates to the handler modules.
 """
 
 import os
+import asyncio
 import discord
 from dotenv import load_dotenv
 from handlers.welcome import handle_member_verified
 from handlers.goodbye import handle_member_left
+from handlers.console import listen as console_listen
 
 load_dotenv()
 
@@ -27,6 +29,9 @@ client = discord.Client(intents=intents)
 async def on_ready():
     print(f"Logged in as {client.user} (ID: {client.user.id})")
     print("------")
+    print("Console commands available — type 'help' to see them")
+    # Start console listener as a background task
+    asyncio.create_task(console_listen(client))
 
 
 # ── Role-gained welcome ─────────────────────────────────────────

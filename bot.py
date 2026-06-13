@@ -30,12 +30,17 @@ tree = app_commands.CommandTree(client)
 async def on_ready():
     print(f"Logged in as {client.user} (ID: {client.user.id})")
     print("------")
+    print(f"Bot is in {len(client.guilds)} guild(s)")
 
-    # Register /say command and sync
-    register_say(tree, client.guilds[0].id)
-    await tree.sync()
-    print("[BOT] Slash commands synced.")
-    print("[BOT] /say is available for admins only.")
+    # Register /say and sync to the first guild the bot is in
+    if client.guilds:
+        guild = client.guilds[0]
+        register_say(tree, guild.id)
+        await tree.sync(guild=discord.Object(id=guild.id))
+        print(f"[BOT] /say synced to guild: {guild.name} ({guild.id})")
+        print("[BOT] /say is available for admins only.")
+    else:
+        print("[WARNING] Bot is not in any guild yet.")
 
 
 # ── Role-gained welcome ─────────────────────────────────────────

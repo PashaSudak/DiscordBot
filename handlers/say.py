@@ -12,7 +12,7 @@ import config
 
 
 def register(tree: app_commands.CommandTree, guild_id: int):
-    """Register the /say slash command on the command tree."""
+    """Register the /say slash command for a specific guild."""
 
     @tree.command(
         name="say",
@@ -22,8 +22,6 @@ def register(tree: app_commands.CommandTree, guild_id: int):
     @app_commands.default_permissions(administrator=True)
     @app_commands.checks.has_permissions(administrator=True)
     async def say_command(interaction: discord.Interaction, text: str):
-        """Forward `text` to the configured public channel."""
-
         target = interaction.guild.get_channel(config.CHANNEL_ID)
         if target is None:
             await interaction.response.send_message(

@@ -1,46 +1,40 @@
 """
-say.py — Discord command handler for forwarding messages.
+say.py — Slash command for forwarding messages to general chat.
 
-When a user types "say [text]" in the designated admin channel,
-the bot forwards [text] to the configured public channel (general).
+Command: /say [text]
+Permission: Administrator only
+Action:   Sends [text] to the configured public channel (general).
 """
 
 import discord
+from discord import app_commands
 import config
 
 
-async def handle_message(message: discord.Message) -> bool:
-    """
-    Check if the message is a 'say' command from the admin channel.
-    Returns True if handled, False otherwise.
-    """
-    # Ignore bot's own messages
-    if message.author.bot:
-        return False
+def register(tree: app_commands.CommandTree, guild_id: int):
+    """Register the /say slash command on the command tree."""
 
-    # Only accept commands from the designated admin channel
-    if message.channel.id != config.ADMIN_CHANNEL_ID:
-        return False
+    @tree.command(
+        name="say",
+        description="Send a message to the general channel",
+        guild=discord.Object(id=guild_id),
+    )
+    @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
+    async def say_command(interaction: discord.Interaction, text: str):
+        """Forward `text` to the configured public channel."""
 
-    content = message.content.strip()
+        target = interaction.guild.get_channel(config.CHANNEL_ID)
+        if target is None:
+            await interaction.response.send_message(
+                f"❌ Target channel (ID: {config.CHANNEL_ID}) not found.",
+                ephemeral=True,
+            )
+            return
 
-    if not content.startswith("say "):
-        return False
-
-    text = content[4:].strip()
-    if not text:
-        # No text after "say "
-        await message.add_reaction("❌")
-        return True
-
-    # Send to the public target channel (general)
-    target = message.guild.get_channel(config.CHANNEL_ID)
-    if target is None:
-        await message.add_reaction("❌")
-        print(f"[SAY] ERROR: Target channel {config.CHANNEL_ID} not found")
-        return True
-
-    await target.send(text)
-    await message.add_reaction("✅")
-    print(f"[SAY] {message.author.name} → #{target.name}: {text}")
-    return True
+        await target.send(text)
+        await interaction.response.send_message(
+            f"✅ Sent to #{target.name}",
+            ephemeral=True,
+        )
+        print(f"[SAY] {interaction.user.name} → #{target.name}: {text}")

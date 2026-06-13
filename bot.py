@@ -7,20 +7,21 @@ registers event listeners, and delegates to the handler modules.
 
 import os
 import discord
+from discord import app_commands
 from dotenv import load_dotenv
 from handlers.welcome import handle_member_verified
 from handlers.goodbye import handle_member_left
-from handlers.say import handle_message as say_handler
+from handlers.say import register as register_say
 
 load_dotenv()
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 
 intents = discord.Intents.default()
-intents.members = True       # Required for role-change & member-remove events
-intents.message_content = True  # Required to read message content
+intents.members = True  # Required for role-change & member-remove events
 
 client = discord.Client(intents=intents)
+tree = app_commands.CommandTree(client)
 
 
 # ── Lifecycle ────────────────────────────────────────────────────
@@ -29,6 +30,12 @@ client = discord.Client(intents=intents)
 async def on_ready():
     print(f"Logged in as {client.user} (ID: {client.user.id})")
     print("------")
+
+    # Register /say command and sync
+    register_say(tree, client.guilds[0].id)
+    await tree.sync()
+    print("[BOT] Slash commands synced.")
+    print("[BOT] /say is available for admins only.")
 
 
 # ── Role-gained welcome ─────────────────────────────────────────
@@ -43,13 +50,6 @@ async def on_member_update(before: discord.Member, after: discord.Member):
 @client.event
 async def on_member_remove(member: discord.Member):
     await handle_member_left(member)
-
-
-# ── Discord "say" command (admin channel → general) ─────────────
-
-@client.event
-async def on_message(message: discord.Message):
-    await say_handler(message)
 
 
 # ── Launch ───────────────────────────────────────────────────────

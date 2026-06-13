@@ -17,12 +17,17 @@ import config
 async def listen(client: discord.Client):
     """
     Read commands from stdin and execute them.
-    Spawned as a background task from bot.py on_ready.
+    Works with Render's Web Shell (connects to container stdin/stdout).
     """
     loop = asyncio.get_running_loop()
+    print("[CONSOLE] Ready. Type 'help' for commands.", flush=True)
 
     while True:
         line = await loop.run_in_executor(None, sys.stdin.readline)
+        if not line:
+            # EOF (stdin closed / Web Shell disconnected)
+            print("[CONSOLE] stdin closed, stopping listener.")
+            break
         line = line.strip()
         if not line:
             continue
@@ -34,21 +39,21 @@ async def listen(client: discord.Client):
         elif line == "help":
             _print_help()
         elif line == "exit":
-            print("[CONSOLE] Shutting down...")
+            print("[CONSOLE] Shutting down...", flush=True)
             await client.close()
             break
         else:
-            print(f"[CONSOLE] Unknown command: {line}. Type 'help' for available commands.")
+            print(f"[CONSOLE] Unknown command: {line}. Type 'help' for available commands.", flush=True)
 
 
 async def _do_say(client: discord.Client, text: str):
     """Send a plain text message to the configured channel."""
     channel = client.get_channel(config.CHANNEL_ID)
     if channel is None:
-        print(f"[CONSOLE] ERROR: Channel ID {config.CHANNEL_ID} not found")
+        print(f"[CONSOLE] ERROR: Channel ID {config.CHANNEL_ID} not found", flush=True)
         return
     await channel.send(text)
-    print(f"[CONSOLE] ✅ Sent: {text}")
+    print(f"[CONSOLE] ✅ Sent: {text}", flush=True)
 
 
 def _print_help():

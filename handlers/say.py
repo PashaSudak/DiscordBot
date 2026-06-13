@@ -21,6 +21,9 @@ def register(tree: app_commands.CommandTree):
     @app_commands.default_permissions(administrator=True)
     @app_commands.checks.has_permissions(administrator=True)
     async def say_command(interaction: discord.Interaction, text: str):
-        """Send `text` in the same channel the command was used in."""
-        await interaction.response.send_message(text)
+        """Send `text` as a normal bot message in the channel."""
+        # Acknowledge the command privately so Discord knows we handled it
+        await interaction.response.send_message("✅", ephemeral=True)
+        # Send the actual message as a regular channel message (not a reply)
+        await interaction.channel.send(text)
         print(f"[SAY] {interaction.user.name} → #{interaction.channel.name}: {text}")

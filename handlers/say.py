@@ -1,38 +1,26 @@
 """
-say.py — Slash command for forwarding messages to general chat.
+say.py — Slash command for sending messages.
 
 Command: /say [text]
 Permission: Administrator only
-Action:   Sends [text] to the configured public channel (general).
+Action:   Sends [text] in the same channel where the command was used.
+Works in every guild the bot is in.
 """
 
 import discord
 from discord import app_commands
-import config
 
 
-def register(tree: app_commands.CommandTree, guild_id: int):
-    """Register the /say slash command for a specific guild."""
+def register(tree: app_commands.CommandTree):
+    """Register the /say slash command globally (all guilds)."""
 
     @tree.command(
         name="say",
-        description="Send a message to the general channel",
-        guild=discord.Object(id=guild_id),
+        description="Send a message in this channel",
     )
     @app_commands.default_permissions(administrator=True)
     @app_commands.checks.has_permissions(administrator=True)
     async def say_command(interaction: discord.Interaction, text: str):
-        target = interaction.guild.get_channel(config.CHANNEL_ID)
-        if target is None:
-            await interaction.response.send_message(
-                f"❌ Target channel (ID: {config.CHANNEL_ID}) not found.",
-                ephemeral=True,
-            )
-            return
-
-        await target.send(text)
-        await interaction.response.send_message(
-            f"✅ Sent to #{target.name}",
-            ephemeral=True,
-        )
-        print(f"[SAY] {interaction.user.name} → #{target.name}: {text}")
+        """Send `text` in the same channel the command was used in."""
+        await interaction.response.send_message(text)
+        print(f"[SAY] {interaction.user.name} → #{interaction.channel.name}: {text}")

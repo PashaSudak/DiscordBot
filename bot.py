@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from handlers.welcome import handle_member_verified
 from handlers.goodbye import handle_member_left
 from handlers.say import register as register_say
+from handlers.ban import register as register_ban
 
 load_dotenv()
 
@@ -32,12 +33,13 @@ async def on_ready():
     print("------")
     print(f"Bot is in {len(client.guilds)} guild(s)")
 
-    # Register /say globally (appears in all guilds, may take up to 1 hour)
+    # Register commands globally (appears in all guilds, may take up to 1 hour)
     register_say(tree)
+    register_ban(tree)
     await tree.sync()
-    print("[BOT] /say registered globally for all guilds.")
+    print("[BOT] /say and /ban registered globally for all guilds.")
     print("[BOT] It may take up to 1 hour to appear in all servers.")
-    print("[BOT] /say is available for admins only.")
+    print("[BOT] Both commands are available for admins only.")
 
 
 # ── Role-gained welcome ─────────────────────────────────────────

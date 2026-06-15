@@ -28,6 +28,11 @@ def _save(path: str, data: Any) -> None:
         json.dump(data, f)
 
 
+# Public aliases so other modules can use the helpers
+load_data = _load
+save_data = _save
+
+
 # ── Welcomed users (set of ints) ────────────────────────────────
 
 def load_welcomed_users() -> Set[int]:

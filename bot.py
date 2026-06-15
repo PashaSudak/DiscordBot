@@ -6,13 +6,14 @@ registers event listeners, and delegates to the handler modules.
 """
 
 import os
+import asyncio
 import discord
 from discord import app_commands
 from dotenv import load_dotenv
 from handlers.welcome import handle_member_verified
 from handlers.goodbye import handle_member_left
 from handlers.say import register as register_say
-from handlers.ban import register as register_ban
+from handlers.ban import register as register_ban, process_pending_bans
 
 load_dotenv()
 
@@ -37,9 +38,13 @@ async def on_ready():
     register_say(tree)
     register_ban(tree)
     await tree.sync()
-    print("[BOT] /say and /ban registered globally for all guilds.")
+    print("[BOT] /say and /delayed-ban registered globally for all guilds.")
     print("[BOT] It may take up to 1 hour to appear in all servers.")
     print("[BOT] Both commands are available for admins only.")
+
+    # Resume any pending bans that survived a restart
+    asyncio.create_task(process_pending_bans(client))
+    print("[BOT] Checking for pending bans...")
 
 
 # ── Role-gained welcome ─────────────────────────────────────────

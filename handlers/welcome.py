@@ -25,12 +25,7 @@ async def handle_member_verified(before: discord.Member, after: discord.Member) 
     if config.TARGET_ROLE_ID not in (after_ids - before_ids):
         return False
 
-    # --- Record verification time (used by goodbye tracker) ---
-    timestamps = storage.load_timestamps()
-    timestamps[str(after.id)] = time.time()
-    storage.save_timestamps(timestamps)
-
-    # --- 1-message-per-user guard ---
+    # --- 1-message-per-user guard (check BEFORE recording anything) ---
     welcomed = storage.load_welcomed_users()
     if after.id in welcomed:
         print(f"[SKIP] {after.name} (ID: {after.id}) already welcomed previously")
@@ -38,6 +33,11 @@ async def handle_member_verified(before: discord.Member, after: discord.Member) 
 
     welcomed.add(after.id)
     storage.save_welcomed_users(welcomed)
+
+    # --- Record verification time (used by goodbye tracker) ---
+    timestamps = storage.load_timestamps()
+    timestamps[str(after.id)] = time.time()
+    storage.save_timestamps(timestamps)
 
     # --- Resolve target channel ---
     channel = after.guild.get_channel(config.CHANNEL_ID)

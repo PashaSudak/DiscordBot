@@ -14,13 +14,15 @@ from handlers.welcome import handle_member_verified
 from handlers.goodbye import handle_member_left
 from handlers.say import register as register_say
 from handlers.ban import register as register_ban, process_pending_bans
+from handlers.chat_revive import handle_message as chat_revive_handler, background_loop as chat_revive_loop
 
 load_dotenv()
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 
 intents = discord.Intents.default()
-intents.members = True  # Required for role-change & member-remove events
+intents.members = True       # Required for role-change & member-remove events
+intents.message_content = True  # Required to read role mentions in messages
 
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
@@ -46,6 +48,10 @@ async def on_ready():
     asyncio.create_task(process_pending_bans(client))
     print("[BOT] Checking for pending bans...")
 
+    # Start chat revive background loop (toggles role mentionable state every 60s)
+    asyncio.create_task(chat_revive_loop(client))
+    print("[BOT] Chat revive rate-limiter started.")
+
 
 # ── Role-gained welcome ─────────────────────────────────────────
 
@@ -59,6 +65,13 @@ async def on_member_update(before: discord.Member, after: discord.Member):
 @client.event
 async def on_member_remove(member: discord.Member):
     await handle_member_left(member)
+
+
+# ── Chat revive rate-limit ──────────────────────────────────────
+
+@client.event
+async def on_message(message: discord.Message):
+    await chat_revive_handler(message)
 
 
 # ── Launch ───────────────────────────────────────────────────────

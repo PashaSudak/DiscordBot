@@ -7,6 +7,7 @@ registers event listeners, and delegates to the handler modules.
 
 import os
 import asyncio
+import time
 import discord
 from discord import app_commands
 from dotenv import load_dotenv
@@ -15,6 +16,7 @@ from handlers.goodbye import handle_member_left
 from handlers.say import register as register_say
 from handlers.ban import register as register_ban, process_pending_bans
 from handlers.chat_revive import handle_message as chat_revive_handler, background_loop as chat_revive_loop
+import storage
 
 load_dotenv()
 
@@ -27,6 +29,24 @@ intents.message_content = True  # Required to read role mentions in messages
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
+SYNC_COOLDOWN_FILE = "last_sync_time.json"
+SYNC_COOLDOWN_SECONDS = 300  # 5 minutes between syncs
+
+
+def _can_sync() -> bool:
+    """Check if enough time has passed since last sync (prevents 429 rate-limits)."""
+    data = storage.load_data(SYNC_COOLDOWN_FILE, {"last_sync": 0})
+    elapsed = time.time() - data["last_sync"]
+    if elapsed < SYNC_COOLDOWN_SECONDS:
+        remaining = SYNC_COOLDOWN_SECONDS - elapsed
+        print(f"[BOT] Sync cooldown active — {remaining:.0f}s remaining. Skipping sync.")
+        return False
+    return True
+
+
+def _mark_synced():
+    storage.save_data(SYNC_COOLDOWN_FILE, {"last_sync": time.time()})
+
 
 # ── Lifecycle ────────────────────────────────────────────────────
 
@@ -36,13 +56,21 @@ async def on_ready():
     print("------")
     print(f"Bot is in {len(client.guilds)} guild(s)")
 
-    # Register commands globally (appears in all guilds, may take up to 1 hour)
+    # Register commands
     register_say(tree)
     register_ban(tree)
-    await tree.sync()
-    print("[BOT] /say and /delayed-ban registered globally for all guilds.")
-    print("[BOT] It may take up to 1 hour to appear in all servers.")
-    print("[BOT] Both commands are available for admins only.")
+
+    # Only sync if cooldown has passed (prevents 429 rate-limit bans)
+    if _can_sync():
+        try:
+            await tree.sync()
+            _mark_synced()
+            print("[BOT] /say and /delayed-ban synced.")
+        except discord.HTTPException as e:
+            print(f"[BOT] Sync failed (rate-limited?): {e}")
+            print("[BOT] Commands will still work after Discord refreshes them.")
+    else:
+        print("[BOT] Using previously synced commands.")
 
     # Resume any pending bans that survived a restart
     asyncio.create_task(process_pending_bans(client))

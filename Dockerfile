@@ -13,5 +13,5 @@ COPY . .
 RUN mkdir -p /app/data && \
     chmod 777 /app/data
 
-# Render will run this command (defined in render.yaml)
-CMD ["python", "main.py"]
+# Use the retry wrapper (handles 429 rate-limits gracefully)
+CMD ["bash", "entrypoint.sh"]

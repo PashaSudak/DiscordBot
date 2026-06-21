@@ -30,6 +30,21 @@ GRACE_PERIOD = 10              # Messages after an action where caps don't count
 MUTE_5MIN = 300
 MUTE_1HOUR = 3600
 
+# Dedup: remember last 50 message IDs we've processed to avoid double-processing
+_processed_ids = set()
+
+
+def _is_duplicate(message_id: int) -> bool:
+    """Check if we've already processed this message ID. Returns True if duplicate."""
+    if message_id in _processed_ids:
+        return True
+    _processed_ids.add(message_id)
+    # Keep the set from growing forever
+    if len(_processed_ids) > 100:
+        _processed_ids.clear()
+    return False
+
+
 # ── Data helpers ────────────────────────────────────────────────────────────
 
 def _load_all():
@@ -64,9 +79,13 @@ def _has_more_than_half_caps(text: str) -> bool:
 async def handle_message(message: discord.Message) -> bool:
     """
     Check a message for caps abuse. Returns True if a warning/mute action was
-    taken (message was deleted), False otherwise.
+    taken, False otherwise.
     """
     if message.author.bot:
+        return False
+
+    # Deduplicate — ignore if we already processed this message
+    if _is_duplicate(message.id):
         return False
 
     text = message.content.strip()
@@ -98,16 +117,12 @@ async def handle_message(message: discord.Message) -> bool:
     user["since_action"] += 1
 
     # ── Not enough data yet?  Just save and return ───────────────────────
-    # We track the total number of messages we've ever seen for this user
-    # by checking history length vs MIN_MESSAGES. The user needs to have
-    # at least MIN_MESSAGES tracked before we take action.
     if len(user["history"]) < MIN_MESSAGES:
         _save_all(all_data)
         return False
 
     # ── Grace period: don't count caps toward warnings ───────────────────
     if user["since_action"] <= GRACE_PERIOD and user["warnings"] > 0:
-        # The user is in grace — we still track the message but don't trigger
         _save_all(all_data)
         return False
 
@@ -120,15 +135,18 @@ async def handle_message(message: discord.Message) -> bool:
         _save_all(all_data)
         return False  # Not enough caps — let the message through
 
-    # ── TRIGGERED — Delete the offending message ─────────────────────────
-    try:
-        await message.delete()
-        print(f"[CAPS] Deleted message from {message.author.name} ({ratio:.0%} caps)")
-    except discord.Forbidden:
-        print(f"[CAPS] Missing permissions to delete message from {message.author.name}")
-        # Still proceed with warning even if we can't delete
-    except discord.NotFound:
-        pass  # Already deleted
+    # ── TRIGGERED — Only delete THIS message if it is caps-heavy ─────────
+    if is_caps:
+        try:
+            await message.delete()
+            print(f"[CAPS] Deleted caps message from {message.author.name} ({ratio:.0%} caps)")
+        except discord.Forbidden:
+            print(f"[CAPS] Missing permissions to delete message from {message.author.name}")
+        except discord.NotFound:
+            pass
+    else:
+        # This specific message is fine, but the user's overall ratio is too high
+        print(f"[CAPS] {message.author.name} at {ratio:.0%} caps — current message OK, not deleted")
 
     # ── Determine action based on prior warning count ────────────────────
     dm_text = f"Your CAPS usage is way too high — {ratio:.0%}\nPlease tone it down, or you might get muted if you keep it up (｡•̀ ⤙ •́ ｡ꐦ) !!!"
@@ -146,11 +164,9 @@ async def handle_message(message: discord.Message) -> bool:
 
     # ── Mute if this is the 2nd+ offense ─────────────────────────────────
     if user["warnings"] >= 3:
-        # 3rd+ offense → 1 hour mute
         mute_duration = MUTE_1HOUR
         reason_suffix = f"(3rd+ offense, {ratio:.0%} caps)"
     elif user["warnings"] == 2:
-        # 2nd offense → 5 minute mute
         mute_duration = MUTE_5MIN
         reason_suffix = f"(2nd offense, {ratio:.0%} caps)"
     else:
@@ -158,7 +174,6 @@ async def handle_message(message: discord.Message) -> bool:
 
     if mute_duration:
         try:
-            # Use timeout (Discord's built-in timed-out feature)
             until = discord.utils.utcnow() + datetime.timedelta(seconds=mute_duration)
             await message.author.timeout(until, reason=f"Excessive caps {reason_suffix}")
             duration_str = f"{mute_duration//60} minute(s)"

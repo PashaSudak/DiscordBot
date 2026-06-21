@@ -30,8 +30,14 @@ GRACE_PERIOD = 10              # Messages after an action where caps don't count
 MUTE_5MIN = 300
 MUTE_1HOUR = 3600
 
-# Dedup: remember last 50 message IDs we've processed to avoid double-processing
+# Dedup: remember last 100 message IDs we've processed to avoid double-processing
 _processed_ids = set()
+
+# Prevent rapid-fire actions: after a warning/mute, skip caps checks for this user
+# for ACTION_COOLDOWN seconds. Key: user_id_str, Value: unix timestamp when cooldown expires.
+_action_cooldowns: dict = {}
+
+ACTION_COOLDOWN_SECONDS = 30  # Don't take another action on the same user within 30s
 
 
 def _is_duplicate(message_id: int) -> bool:
@@ -126,6 +132,12 @@ async def handle_message(message: discord.Message) -> bool:
         _save_all(all_data)
         return False
 
+    # ── Action cooldown: prevent rapid successive actions ────────────────
+    cooldown_until = _action_cooldowns.get(uid, 0)
+    if now < cooldown_until:
+        # User had an action taken within the last ACTION_COOLDOWN_SECONDS
+        return False
+
     # ── Calculate caps ratio over the rolling window ─────────────────────
     total_in_window = len(user["history"])
     caps_in_window = sum(msg["caps"] for msg in user["history"])
@@ -134,6 +146,9 @@ async def handle_message(message: discord.Message) -> bool:
     if ratio <= CAPS_RATIO_TRIGGER:
         _save_all(all_data)
         return False  # Not enough caps — let the message through
+
+    # ── Set action cooldown BEFORE any actual action (db write, DM, mute) ─
+    _action_cooldowns[uid] = now + ACTION_COOLDOWN_SECONDS
 
     # ── TRIGGERED — Only delete THIS message if it is caps-heavy ─────────
     if is_caps:

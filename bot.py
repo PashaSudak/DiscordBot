@@ -16,6 +16,7 @@ from handlers.goodbye import handle_member_left
 from handlers.say import register as register_say
 from handlers.ban import register as register_ban, process_pending_bans
 from handlers.chat_revive import handle_message as chat_revive_handler, background_loop as chat_revive_loop
+from handlers.caps import handle_message as caps_handler
 import storage
 
 load_dotenv()
@@ -95,10 +96,13 @@ async def on_member_remove(member: discord.Member):
     await handle_member_left(member)
 
 
-# ── Chat revive rate-limit ──────────────────────────────────────
+# ── Message-based moderation (caps + chat revive) ──────────────
 
 @client.event
 async def on_message(message: discord.Message):
+    # Run caps check first (may delete the message)
+    await caps_handler(message)
+    # Then run chat revive check
     await chat_revive_handler(message)
 
 

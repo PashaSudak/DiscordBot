@@ -33,10 +33,6 @@ MUTE_1HOUR = 3600
 # Dedup: remember last 100 message IDs we've processed to avoid double-processing
 _processed_ids = set()
 
-# Prevent rapid-fire actions: after a warning/mute, skip caps checks for this user
-# for ACTION_COOLDOWN seconds. Key: user_id_str, Value: unix timestamp when cooldown expires.
-_action_cooldowns: dict = {}
-
 ACTION_COOLDOWN_SECONDS = 30  # Don't take another action on the same user within 30s
 
 
@@ -133,7 +129,7 @@ async def handle_message(message: discord.Message) -> bool:
         return False
 
     # ── Action cooldown: prevent rapid successive actions ────────────────
-    cooldown_until = _action_cooldowns.get(uid, 0)
+    cooldown_until = user.get("cooldown_until", 0)
     if now < cooldown_until:
         # User had an action taken within the last ACTION_COOLDOWN_SECONDS
         return False
@@ -147,23 +143,25 @@ async def handle_message(message: discord.Message) -> bool:
         _save_all(all_data)
         return False  # Not enough caps — let the message through
 
-    # ── Set action cooldown BEFORE any actual action (db write, DM, mute) ─
-    _action_cooldowns[uid] = now + ACTION_COOLDOWN_SECONDS
+    # ── TRIGGERED — Require THIS message to also be caps-heavy ───────────
+    if not is_caps:
+        # Overall ratio is high, but this specific message is fine — skip action
+        _save_all(all_data)
+        return False
 
-    # ── TRIGGERED — Only delete THIS message if it is caps-heavy ─────────
-    if is_caps:
-        try:
-            await message.delete()
-            print(f"[CAPS] Deleted caps message from {message.author.name} ({ratio:.0%} caps)")
-        except discord.Forbidden:
-            print(f"[CAPS] Missing permissions to delete message from {message.author.name}")
-        except discord.NotFound:
-            pass
-    else:
-        # This specific message is fine, but the user's overall ratio is too high
-        print(f"[CAPS] {message.author.name} at {ratio:.0%} caps — current message OK, not deleted")
+    # ── Set action cooldown (persisted, survives restarts) ──────────────
+    user["cooldown_until"] = now + ACTION_COOLDOWN_SECONDS
 
-    # ── Determine action based on prior warning count ────────────────────
+    # ── Delete the caps message ─────────────────────────────────────────
+    try:
+        await message.delete()
+        print(f"[CAPS] Deleted caps message from {message.author.name} ({ratio:.0%} caps)")
+    except discord.Forbidden:
+        print(f"[CAPS] Missing permissions to delete message from {message.author.name}")
+    except discord.NotFound:
+        pass
+
+    # ── Send DM warning ─────────────────────────────────────────────────
     dm_text = f"Your CAPS usage is way too high — {ratio:.0%}\nPlease tone it down, or you might get muted if you keep it up (｡•̀ ⤙ •́ ｡ꐦ) !!!"
 
     user["warnings"] += 1

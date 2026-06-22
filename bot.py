@@ -16,8 +16,7 @@ from handlers.goodbye import handle_member_left
 from handlers.say import register as register_say
 from handlers.ban import register as register_ban, process_pending_bans
 from handlers.chat_revive import handle_message as chat_revive_handler, background_loop as chat_revive_loop
-from handlers.caps import handle_message as caps_handler
-from handlers.caps_stats import register as register_caps_stats
+# Caps auto-moderation and /caps command are disabled
 import storage
 
 load_dotenv()
@@ -61,14 +60,13 @@ async def on_ready():
     # Register commands
     register_say(tree)
     register_ban(tree)
-    register_caps_stats(tree)
 
     # Only sync if cooldown has passed (prevents 429 rate-limit bans)
     if _can_sync():
         try:
             await tree.sync()
             _mark_synced()
-            print("[BOT] /say, /delayed-ban, and /caps synced.")
+            print("[BOT] /say and /delayed-ban synced.")
         except discord.HTTPException as e:
             print(f"[BOT] Sync failed (rate-limited?): {e}")
             print("[BOT] Commands will still work after Discord refreshes them.")
@@ -102,9 +100,7 @@ async def on_member_remove(member: discord.Member):
 
 @client.event
 async def on_message(message: discord.Message):
-    # Run caps check first (may delete the message)
-    await caps_handler(message)
-    # Then run chat revive check
+    # Only run chat revive check (caps auto-moderation is disabled)
     await chat_revive_handler(message)
 
 
